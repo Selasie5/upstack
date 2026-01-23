@@ -5,5 +5,5 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Client application started")
+	fmt.Println("Client application started, dadadada")
 }
