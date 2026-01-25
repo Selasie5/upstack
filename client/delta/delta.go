@@ -1,6 +1,8 @@
 package delta
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -22,6 +24,8 @@ func SplitFileIntoChunks(filePath string) error {
 	}
 	defer file.Close()
 	buffer := make([]byte, chunkSize)
+	var chunks []Chunk
+	index := 0
 	for {
 		bytesRead, err := file.Read(buffer)
 		if err != nil && err != io.EOF {
@@ -31,7 +35,20 @@ func SplitFileIntoChunks(filePath string) error {
 			break
 		}
 		fmt.Printf("Read chunk of size: %d\n", bytesRead)
+		chunkData := make([]byte, bytesRead)
+		copy(chunkData, buffer[:bytesRead])
 
+		hash := sha256.Sum256(chunkData)
+		hashStr := hex.EncodeToString(hash[:])
+
+		chunk := Chunk{
+			Index: index,
+			Data:  chunkData,
+			Hash:  hashStr,
+		}
+
+		chunks = append(chunks, chunk)
+		index++
 	}
 	return nil
 }
