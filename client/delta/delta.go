@@ -73,3 +73,13 @@ func CompareChunkHashes(local, remote []Chunk) []int {
 	}
 	return changedIndexes
 }
+
+func GetChangedChunks(localChunks []Chunk, changedIndexes []int) []Chunk {
+	var changedChunks []Chunk
+	for _, idx := range changedIndexes {
+		if idx < len(localChunks) {
+			changedChunks = append(changedChunks, localChunks[idx])
+		}
+	}
+	return changedChunks
+}
