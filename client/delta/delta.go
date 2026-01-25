@@ -1,14 +1,17 @@
 package delta
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 )
 
 const chunkSize = 4 * 1024 * 1024 // 4MB chunk size for delta transfers
+const uploadURL = "https://example.com/upload"
 
 type Chunk struct {
 	Index int
@@ -82,4 +85,27 @@ func GetChangedChunks(localChunks []Chunk, changedIndexes []int) []Chunk {
 		}
 	}
 	return changedChunks
+}
+
+func UploadChunks(chunks []Chunk) error {
+	for _, chunk := range chunks {
+		req, err := http.NewRequest("POST", uploadURL, bytes.NewReader(chunk.Data))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("X-Chunk-Index", fmt.Sprintf("%d", chunk.Index))
+		req.Header.Set("X-Chunk-Hash", chunk.Hash)
+		req.Header.Set("Content-Length", fmt.Sprintf("%d", len(chunk.Data)))
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("failed to upload chunk %d: %s", chunk.Index, resp.Status)
+		}
+		resp.Body.Close()
+		return nil
+	}
+
+	return nil
 }
