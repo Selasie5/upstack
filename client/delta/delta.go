@@ -16,11 +16,11 @@ type Chunk struct {
 	Hash  string
 }
 
-func SplitFileIntoChunks(filePath string) error {
+func SplitFileIntoChunks(filePath string) ([]Chunk, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return nil, err
 	}
 	defer file.Close()
 	buffer := make([]byte, chunkSize)
@@ -29,7 +29,7 @@ func SplitFileIntoChunks(filePath string) error {
 	for {
 		bytesRead, err := file.Read(buffer)
 		if err != nil && err != io.EOF {
-			return err
+			return nil, err
 		}
 		if bytesRead == 0 {
 			break
@@ -50,5 +50,26 @@ func SplitFileIntoChunks(filePath string) error {
 		chunks = append(chunks, chunk)
 		index++
 	}
-	return nil
+	return chunks, nil
+}
+
+func CompareChunkHashes(local, remote []Chunk) []int {
+	var changedIndexes []int
+	maxLen := len(local)
+	if len(remote) > maxLen {
+		maxLen = len(remote)
+	}
+	for i := 0; i < maxLen; i++ {
+		var localHash, remoteHash string
+		if i < len(local) {
+			localHash = local[i].Hash
+		}
+		if i < len(remote) {
+			remoteHash = remote[i].Hash
+		}
+		if localHash != remoteHash {
+			changedIndexes = append(changedIndexes, i)
+		}
+	}
+	return changedIndexes
 }
