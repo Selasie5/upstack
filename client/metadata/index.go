@@ -1,3 +1,2 @@
-//Local file tracking and metadata management for the client application
-
+// Local file tracking and metadata management for the client application
 package metadata
