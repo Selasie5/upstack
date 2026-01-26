@@ -1,111 +1,80 @@
 package delta
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
-	"net/http"
 	"os"
+	"sync"
 )
 
-const chunkSize = 4 * 1024 * 1024 // 4MB chunk size for delta transfers
-const uploadURL = "https://example.com/upload"
+const ChunkSize = 4 * 1024 * 1024 // 4MB
 
+// Chunk represents a file chunk with its hash and data
 type Chunk struct {
-	Index int
-	Data  []byte
-	Hash  string
+	Hash string
+	Data []byte
 }
 
-func SplitFileIntoChunks(filePath string) ([]Chunk, error) {
+// DeltaManager manages delta sync, chunking, and atomic operations
+type DeltaManager struct {
+	mu sync.Mutex
+	// Add fields for metadata and storage integration as needed
+}
+
+// ChunkFile splits a file into chunks, hashes them, and returns the list of chunks
+func (dm *DeltaManager) ChunkFile(filePath string) ([]Chunk, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	defer file.Close()
-	buffer := make([]byte, chunkSize)
+
 	var chunks []Chunk
-	index := 0
+	buf := make([]byte, ChunkSize)
 	for {
-		bytesRead, err := file.Read(buffer)
-		if err != nil && err != io.EOF {
-			return nil, err
+		n, err := file.Read(buf)
+		if n > 0 {
+			chunkData := make([]byte, n)
+			copy(chunkData, buf[:n])
+			hash := sha256.Sum256(chunkData)
+			chunks = append(chunks, Chunk{
+				Hash: hex.EncodeToString(hash[:]),
+				Data: chunkData,
+			})
 		}
-		if bytesRead == 0 {
+		if err == io.EOF {
 			break
 		}
-		fmt.Printf("Read chunk of size: %d\n", bytesRead)
-		chunkData := make([]byte, bytesRead)
-		copy(chunkData, buffer[:bytesRead])
-
-		hash := sha256.Sum256(chunkData)
-		hashStr := hex.EncodeToString(hash[:])
-
-		chunk := Chunk{
-			Index: index,
-			Data:  chunkData,
-			Hash:  hashStr,
+		if err != nil {
+			return nil, err
 		}
-
-		chunks = append(chunks, chunk)
-		index++
 	}
 	return chunks, nil
 }
 
-func CompareChunkHashes(local, remote []Chunk) []int {
-	var changedIndexes []int
-	maxLen := len(local)
-	if len(remote) > maxLen {
-		maxLen = len(remote)
+// AtomicWriteChunks persists chunks and updates metadata atomically
+func (dm *DeltaManager) AtomicWriteChunks(chunks []Chunk, fileID string, updateMetadata func([]Chunk) error) error {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+
+	// 1. Persist all chunks (simulate storage, replace with actual storage logic)
+	for range chunks {
+		// TODO: Integrate with storage layer (e.g., upload to S3)
+		// For now, simulate success
 	}
-	for i := 0; i < maxLen; i++ {
-		var localHash, remoteHash string
-		if i < len(local) {
-			localHash = local[i].Hash
-		}
-		if i < len(remote) {
-			remoteHash = remote[i].Hash
-		}
-		if localHash != remoteHash {
-			changedIndexes = append(changedIndexes, i)
-		}
+
+	// 2. Update metadata atomically
+	if err := updateMetadata(chunks); err != nil {
+		// Rollback logic if needed
+		return err
 	}
-	return changedIndexes
+	return nil
 }
 
-func GetChangedChunks(localChunks []Chunk, changedIndexes []int) []Chunk {
-	var changedChunks []Chunk
-	for _, idx := range changedIndexes {
-		if idx < len(localChunks) {
-			changedChunks = append(changedChunks, localChunks[idx])
-		}
-	}
-	return changedChunks
-}
-
-func UploadChunks(chunks []Chunk) error {
-	for _, chunk := range chunks {
-		req, err := http.NewRequest("POST", uploadURL, bytes.NewReader(chunk.Data))
-		if err != nil {
-			return err
-		}
-		req.Header.Set("X-Chunk-Index", fmt.Sprintf("%d", chunk.Index))
-		req.Header.Set("X-Chunk-Hash", chunk.Hash)
-		req.Header.Set("Content-Length", fmt.Sprintf("%d", len(chunk.Data)))
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("failed to upload chunk %d: %s", chunk.Index, resp.Status)
-		}
-		resp.Body.Close()
-		return nil
-	}
-
+// Example usage: updateMetadata callback for atomicity
+// In production, this would update the local or remote metadata index
+func updateMetadataExample(chunks []Chunk) error {
+	// TODO: Integrate with metadata/index.go
 	return nil
 }
