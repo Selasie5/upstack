@@ -1,0 +1,6 @@
+(# Local runtime metadata store created by the client demo)
+metadata_store.json
+.metadata_store.json.tmp
+
+# Quick-commit script output/binaries
+bin/
