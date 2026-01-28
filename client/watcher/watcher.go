@@ -130,9 +130,15 @@ func (w *Watcher) scanOnce() error {
 		return walkErr
 	}
 
-	// detect deletions
+	// detect deletions: only mark and emit if entry is not already marked deleted
 	for _, p := range w.Index.WalkEntries() {
 		if _, ok := seen[p]; !ok {
+			if entry, exists := w.Index.Get(p); exists {
+				if entry.State == "deleted" {
+					// already marked deleted; skip re-emitting
+					continue
+				}
+			}
 			w.Index.MarkDeleted(p)
 			w.Events <- Event{Path: p, Op: Remove}
 		}
