@@ -79,16 +79,17 @@ func (w *Watcher) scanOnce() error {
 	seen := make(map[string]struct{})
 	storeBase := filepath.Base(w.Index.Path)
 	tmpBase := storeBase + ".tmp"
-	filepath.WalkDir(w.Root, func(p string, d fs.DirEntry, err error) error {
+	// return any walk error instead of swallowing it
+	walkErr := filepath.WalkDir(w.Root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if d.IsDir() {
 			return nil
 		}
 		rel, err := filepath.Rel(w.Root, p)
 		if err != nil {
-			return nil
+			return err
 		}
 		rel = filepath.ToSlash(rel)
 		// ignore the index storage file and its temp file to avoid self-triggering
@@ -98,7 +99,7 @@ func (w *Watcher) scanOnce() error {
 		seen[rel] = struct{}{}
 		info, err := d.Info()
 		if err != nil {
-			return nil
+			return err
 		}
 		old, ok := w.Index.Get(rel)
 		if !ok {
@@ -116,6 +117,12 @@ func (w *Watcher) scanOnce() error {
 		}
 		return nil
 	})
+
+	if walkErr != nil {
+		// scan failed; do not mark deletions or persist partial state
+		return walkErr
+	}
+
 	// detect deletions
 	for _, p := range w.Index.WalkEntries() {
 		if _, ok := seen[p]; !ok {
