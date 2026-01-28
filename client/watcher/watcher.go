@@ -77,6 +77,8 @@ func (w *Watcher) Stop() {
 // scanOnce scans the filesystem and emits events for new/modified/deleted files.
 func (w *Watcher) scanOnce() error {
 	seen := make(map[string]struct{})
+	storeBase := filepath.Base(w.Index.Path)
+	tmpBase := storeBase + ".tmp"
 	filepath.WalkDir(w.Root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -89,6 +91,10 @@ func (w *Watcher) scanOnce() error {
 			return nil
 		}
 		rel = filepath.ToSlash(rel)
+		// ignore the index storage file and its temp file to avoid self-triggering
+		if rel == storeBase || rel == tmpBase {
+			return nil
+		}
 		seen[rel] = struct{}{}
 		info, err := d.Info()
 		if err != nil {
