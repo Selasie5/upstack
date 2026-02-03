@@ -1,49 +1,47 @@
-//Applicaition's entry point for the client component.
-
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/Selasie5/upstack/client/metadata"
-	"github.com/Selasie5/upstack/client/watcher"
+	"github.com/Selasie5/upstack/client/sync"
 )
 
 func main() {
-	fmt.Println("Client demo: starting watcher")
-	root := filepath.Join(".")
-	store := filepath.Join(".", "metadata_store.json")
-	idx, err := metadata.NewIndex(root, store)
-	if err != nil {
-		log.Fatalf("failed to create index: %v", err)
-	}
-	// initial full scan
-	if err := idx.Populate(); err != nil {
-		log.Printf("populate warning: %v", err)
-	}
-	if err := idx.Save(); err != nil {
-		log.Printf("save warning: %v", err)
+	var (
+		serverURL = flag.String("server", "http://localhost:8080", "Server URL")
+		syncDir   = flag.String("dir", "./sync_folder", "Directory to sync")
+	)
+	flag.Parse()
+
+	log.Printf("Starting UpStack Client Sync Agent")
+	log.Printf("Sync Directory: %s", *syncDir)
+	log.Printf("Server: %s", *serverURL)
+
+	if err := os.MkdirAll(*syncDir, 0755); err != nil {
+		log.Fatalf("failed to create sync dir: %v", err)
 	}
 
-	w := watcher.NewWatcher(root, idx, time.Second)
-	w.Start()
-	// listen for events for 15 seconds
-	timeout := time.After(15 * time.Second)
-	for {
-		select {
-		case ev, ok := <-w.Events:
-			if !ok {
-				fmt.Println("events channel closed")
-				return
-			}
-			fmt.Printf("event: %s %v\n", ev.Path, ev.Op)
-		case <-timeout:
-			w.Stop()
-			fmt.Println("shutting down watcher demo")
-			return
-		}
+	idxPath := filepath.Join(*syncDir, ".upstack_index.json")
+	idx, err := metadata.NewIndex(*syncDir, idxPath)
+	if err != nil {
+		log.Fatalf("failed to load index: %v", err)
 	}
+
+	// Initial scan
+	if err := idx.Populate(); err != nil {
+		log.Printf("initial scan warning: %v", err)
+	}
+	_ = idx.Save()
+
+	engine := sync.NewEngine(*serverURL, *syncDir, idx)
+	engine.Start()
+
+	// Block forever
+	select {}
 }
