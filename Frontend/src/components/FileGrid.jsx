@@ -5,119 +5,93 @@ import {
   Download,
   Trash2,
   Share2,
-  ExternalLink,
   Users,
-} from "lucide-react";
-import { Button } from "./ui/button";
+  Eye
+} from 'lucide-react';
+import { Button } from './ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { getFileIcon } from "./fileIconUtils";
+  DropdownMenuSeparator
+} from './ui/dropdown-menu';
+import { getFileIcon } from './fileIconUtils';
+import { cn } from '../lib/utils';
 
-export function FileGrid({
-  items,
-  onItemClick,
-  onDownload,
-  onDelete,
-  onShare,
-}) {
+export function FileGrid({ items, onItemClick, onDownload, onDelete, onShare }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {items.map((item) => {
-        const fileInfo = item.type === "file" ? getFileIcon(item.name) : null;
-        const IconComponent = item.type === "folder" ? Folder : fileInfo?.icon || File;
-        const iconColor = item.type === "folder" ? "text-blue-600" : (fileInfo?.color || "text-slate-500");
-        const bgColor = item.type === "folder" ? "bg-blue-50" : (fileInfo?.bg || "bg-slate-100");
+        const fileInfo = item.type === 'file' ? getFileIcon(item.name) : null;
+        const IconComponent = item.type === 'folder' ? Folder : (fileInfo?.icon || File);
+        const iconColor = item.type === 'folder' ? 'text-primary' : (fileInfo?.color || 'text-muted-foreground');
+        const bgColor = item.type === 'folder' ? 'bg-primary/10' : (fileInfo?.bg || 'bg-muted/50');
 
         return (
           <div
             key={item.id}
-            className="group relative bg-white border border-slate-200/60 rounded-3xl p-6 hover:border-blue-400/50 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 animate-in fade-in zoom-in-95 cursor-pointer"
+            className="group relative bg-white border border-border rounded-sm p-4 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer"
             onClick={() => onItemClick(item)}
           >
-            <div className="flex items-start justify-between mb-8">
-              <div className={`h-16 w-16 rounded-[22px] ${bgColor} flex items-center justify-center transition-all group-hover:scale-105 duration-500 group-hover:shadow-lg group-hover:shadow-blue-500/5`}>
-                <IconComponent className={`h-8 w-8 ${iconColor}`} strokeWidth={1.5} />
+            <div className="flex items-start justify-between mb-4">
+              <div className={cn("h-12 w-12 rounded-sm flex items-center justify-center border border-border/50", bgColor)}>
+                <IconComponent className={cn("h-6 w-6", iconColor)} strokeWidth={1.5} />
               </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="icon-sm"
-                    className="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity bg-slate-50 border border-slate-100"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <MoreVertical className="h-4.5 w-4.5 text-slate-400" />
+                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="p-1.5 rounded-2xl min-w-[160px] shadow-2xl shadow-slate-200/50 border-slate-200/60">
-                  {item.type === "file" && (
-                    <DropdownMenuItem
-                      className="rounded-xl font-bold text-xs gap-3 py-2.5"
-                      onClick={(e) => { e.stopPropagation(); onDownload(item); }}
-                    >
-                      <Download className="h-4 w-4 text-slate-400" />
-                      Download Object
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem
-                    className="rounded-xl font-bold text-xs gap-3 py-2.5"
-                    onClick={(e) => { e.stopPropagation(); onShare(item); }}
-                  >
-                    <Share2 className="h-4 w-4 text-slate-400" />
-                    Share Access
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onItemClick(item); }}>
+                    <Eye className="mr-2 h-4 w-4" /> View Details
                   </DropdownMenuItem>
-                  <div className="h-px bg-slate-100 my-1.5 mx-1" />
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDownload(item); }}>
+                    <Download className="mr-2 h-4 w-4" /> Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onShare(item); }}>
+                    <Share2 className="mr-2 h-4 w-4" /> Share
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="rounded-xl font-bold text-xs gap-3 py-2.5 text-red-600 focus:bg-red-50 focus:text-red-700"
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
                     onClick={(e) => { e.stopPropagation(); onDelete(item); }}
                   >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Resource
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
 
-            <div className="space-y-1.5">
-              <h4 className="text-base font-black text-slate-900 truncate tracking-tight group-hover:text-blue-600 transition-colors">{item.name}</h4>
-              <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
-                <span>{item.type === "file" ? item.size : 'Virtual Directory'}</span>
-                <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                <span>{item.modified}</span>
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                {item.name}
+              </h3>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-tight">
+                  {item.type === 'file' ? item.size : 'Folder'}
+                </span>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {item.modified}
+                </span>
               </div>
             </div>
 
-            <div className="mt-8 flex items-center justify-between pt-5 border-t border-slate-50">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Synchronized</span>
+            {item.raw?.shared_with?.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1.5">
+                <Users className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Shared Object</span>
               </div>
-
-              {(item.raw?.shared_with?.length > 0) ? (
-                <div className="flex -space-x-3">
-                  {item.raw.shared_with.slice(0, 3).map((u, i) => (
-                    <div key={i} className="h-7 w-7 rounded-full bg-white border-2 border-slate-50 shadow-sm flex items-center justify-center text-[10px] font-black text-blue-600" title={u}>
-                      {u[0].toUpperCase()}
-                    </div>
-                  ))}
-                  {item.raw.shared_with.length > 3 && (
-                    <div className="h-7 w-7 rounded-full bg-slate-50 border-2 border-white flex items-center justify-center text-[8px] font-black text-slate-400">
-                      +{item.raw.shared_with.length - 3}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <Users className="h-3.5 w-3.5" />
-                  <span className="text-[10px] font-bold">Private</span>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         );
       })}

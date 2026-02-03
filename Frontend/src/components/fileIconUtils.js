@@ -62,8 +62,8 @@ export function getFileIcon(fileName) {
     case "css":
       return {
         icon: Code,
-        color: "text-blue-600 dark:text-blue-400",
-        bg: "bg-blue-50 dark:bg-blue-950/30",
+        color: "text-green-600 dark:text-green-400",
+        bg: "bg-green-50 dark:bg-green-950/30",
       };
     default:
       return {

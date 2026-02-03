@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Selasie5/upstack/engine/internal/api"
+	"github.com/Selasie5/upstack/engine/internal/email"
 	"github.com/Selasie5/upstack/engine/internal/metadata"
 	"github.com/Selasie5/upstack/engine/internal/storage"
 	syncer "github.com/Selasie5/upstack/engine/internal/sync"
@@ -61,8 +62,12 @@ func main() {
 
 	syncService := syncer.NewService("./data/sync_events.json")
 
+	// Auth and Email
+	authService := api.NewAuthService(metaStore)
+	emailService := email.NewService()
+
 	// Create HTTP handlers / server
-	srv := api.NewServer(metaService, chunkStore, syncService)
+	srv := api.NewServer(metaService, chunkStore, syncService, authService, emailService)
 
 	// Basic server with 10s timeouts
 	server := &http.Server{

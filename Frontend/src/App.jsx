@@ -1,43 +1,26 @@
 import { useState, useEffect } from 'react';
 import {
-  Search,
-  Grid3x3,
-  List,
-  Upload,
-  FolderPlus,
-  ChevronRight,
-  Home,
-  Star,
-  Clock,
-  Trash2 as TrashIcon,
-  Users,
-  Menu,
-  LogOut,
   ChevronDown,
-  Bell,
-  Settings,
-  HelpCircle,
-  Plus,
   LayoutGrid,
+  List as ListIcon
 } from 'lucide-react';
-import { Button } from './components/ui/button';
-import { FileGrid } from './components/FileGrid';
-import { FileList } from './components/FileList';
-import { StorageBar } from './components/StorageBar';
-import { UploadDialog } from './components/UploadDialog';
-import { ShareDialog } from './components/ShareDialog';
 import { toast, Toaster } from 'sonner';
 import { LoginPage } from './LoginPage';
 import { api, auth, computeChunkHash, computeFileHash } from './services/api';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { EmptyState } from './components/EmptyState';
+import { FileGrid } from './components/FileGrid';
+import { FileList } from './components/FileList';
+import { UploadDialog } from './components/UploadDialog';
+import { ShareDialog } from './components/ShareDialog';
+import { Button } from './components/ui/button';
 
 const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB
 
 export default function App() {
   const [user, setUser] = useState(auth.getUser());
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list'); // Default to list for professional feel
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -67,14 +50,11 @@ export default function App() {
       }
     } catch (err) {
       toast.error("Failed to load files");
-      console.error(err);
     }
   };
 
-  const handleLogin = (userId) => {
-    auth.login(userId);
-    setUser(userId);
-    toast.success(`Welcome back, ${userId}`);
+  const handleLogin = (userData) => {
+    setUser(userData);
   };
 
   const handleLogout = () => {
@@ -91,64 +71,60 @@ export default function App() {
   };
 
   const handleUpload = async (files) => {
-    const toastId = toast.loading("Finalizing objects...");
+    const toastId = toast.loading("Preparing objects...");
     try {
       for (const file of files) {
-        const chunks = [];
         const chunkCount = Math.ceil(file.size / CHUNK_SIZE);
         const chunkHashes = [];
 
         for (let i = 0; i < chunkCount; i++) {
           const start = i * CHUNK_SIZE;
-          const end = Math.min(start + CHUNK_SIZE, file.size);
-          const blob = file.slice(start, end);
-          const hash = await computeChunkHash(blob);
-          chunks.push({ index: i, blob, hash, offset: start, size: blob.size });
-          chunkHashes.push(hash);
+          const end = Math.min(file.size, start + CHUNK_SIZE);
+          const chunk = file.slice(start, end);
+          const hash = await computeChunkHash(chunk);
+          chunkHashes.push({ hash, blob: chunk, index: i, offset: start, size: end - start });
         }
 
-        const fullHash = await computeFileHash(file);
-        const { missing } = await api.checkChunks(chunkHashes);
-        const missingSet = new Set(missing);
+        const missing = await api.checkChunks(chunkHashes.map(c => c.hash));
+        const missingSet = new Set(missing.missing);
 
-        for (const chunk of chunks) {
-          if (missingSet.has(chunk.hash)) {
-            await api.uploadChunk(chunk.hash, chunk.blob);
+        for (const ch of chunkHashes) {
+          if (missingSet.has(ch.hash)) {
+            await api.uploadChunk(ch.hash, ch.blob);
           }
         }
 
-        const meta = {
-          id: `${Date.now()}-${file.name}`,
+        const fileHash = await computeFileHash(file);
+        const metadata = {
+          id: file.name + Date.now(),
           path: file.name,
+          owner_id: user.id || user.email,
           size: file.size,
           mod_time: new Date().toISOString(),
-          version: Date.now(),
-          hash: fullHash,
-          is_deleted: false,
-          chunks: chunks.map(c => ({
+          version: 1,
+          hash: fileHash,
+          chunks: chunkHashes.map(c => ({
             index: c.index,
             offset: c.offset,
             size: c.size,
             hash: c.hash
           }))
         };
-        await api.commitMetadata(meta);
+
+        await api.commitMetadata(metadata);
       }
-      toast.dismiss(toastId);
-      toast.success("All files synchronized");
+      toast.success("Upload complete", { id: toastId });
       loadFiles();
-    } catch (err) {
-      toast.dismiss(toastId);
-      toast.error("Process failed: " + err.message);
+    } catch (e) {
+      toast.error("Upload failed", { id: toastId });
     }
   };
 
   const handleDownload = async (item) => {
-    const toastId = toast.loading("Reassembling " + item.name);
+    const toastId = toast.loading("Assembling object...");
     try {
-      const meta = item.raw;
+      const sortedChunks = [...item.raw.chunks].sort((a, b) => a.index - b.index);
       const blobs = [];
-      const sortedChunks = (meta.chunks || []).sort((a, b) => a.index - b.index);
 
       for (const chunk of sortedChunks) {
         const blob = await api.downloadChunk(chunk.hash);
@@ -165,11 +141,9 @@ export default function App() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast.dismiss(toastId);
-      toast.success("Download complete");
+      toast.success("Download complete", { id: toastId });
     } catch (e) {
-      toast.dismiss(toastId);
-      toast.error("Download failed");
+      toast.error("Download failed", { id: toastId });
     }
   };
 
@@ -178,27 +152,36 @@ export default function App() {
     setShareDialogOpen(true);
   };
 
-  const submitShare = async (userId) => {
+  const submitShare = async (shareEmail) => {
     try {
-      await api.share(fileToShare.id, userId);
-      toast.success(`Access granted to ${userId}`);
+      await api.share(fileToShare.id, shareEmail);
+      toast.success(`Access granted to ${shareEmail}`);
       setShareDialogOpen(false);
+      loadFiles();
     } catch (e) {
       toast.error("Sharing failed: " + e.message);
     }
   };
 
-
   if (!user) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (activeSection === 'shared') {
+      return item.raw.owner_id !== user.id && item.raw.shared_with?.includes(user.id || user.email);
+    }
+    if (activeSection === 'my-files') {
+      return item.raw.owner_id === (user.id || user.email);
+    }
+    return true;
+  });
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] text-slate-900 overflow-hidden font-['Manrope'] selection:bg-rose-100 selection:text-rose-900">
+    <div className="grid grid-cols-[240px_1fr] h-screen bg-background overflow-hidden selection:bg-primary/10 selection:text-primary">
       <Sidebar
         activeSection={activeSection}
         setActiveSection={setActiveSection}
@@ -206,61 +189,58 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 flex flex-col relative overflow-hidden lg:pl-64">
+      <div className="flex flex-col overflow-hidden">
         <Topbar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          onUpload={() => setUploadDialogOpen(true)}
+          onUploadClick={() => setUploadDialogOpen(true)}
+          user={user}
         />
 
-        {/* Scrollable Content Container */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 no-scrollbar">
-          <div className="max-w-7xl mx-auto">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto p-6 space-y-6">
+            <header className="flex items-center justify-between">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-rose-600 font-bold text-[10px] uppercase tracking-[0.25em] mb-1.5">
-                  <div className="h-1 w-3 bg-rose-600 rounded-full" />
-                  Distributed Node Console
-                </div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight cursor-default">
-                  {activeSection.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}
-                </h2>
-                <p className="text-slate-500 font-medium text-sm max-w-sm">
-                  Access and manage your cloud objects synchronized across the system.
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                  {activeSection === 'my-files' ? 'My Files' :
+                    activeSection === 'shared' ? 'Shared with me' :
+                      activeSection.charAt(0).toUpperCase() + activeSection.slice(1)}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Manage and sync your distributed objects.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 p-1 bg-white border border-slate-200/50 rounded-2xl shadow-sm">
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="icon-sm"
-                  className={`rounded-xl transition-all ${viewMode === 'grid' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'}`}
-                  onClick={() => setViewMode('grid')}
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                  size="icon-sm"
-                  className={`rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'}`}
-                  onClick={() => setViewMode('list')}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <div className="w-px h-4 bg-slate-200 mx-1.5" />
-                <Button variant="ghost" size="sm" className="font-bold text-[10px] h-8 px-3 rounded-xl text-slate-500 hover:text-slate-900 uppercase tracking-widest">
-                  Recent <ChevronDown className="ml-1 h-3.5 w-3.5" />
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-muted p-1 rounded-sm border border-border">
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-7 w-7 rounded-sm"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <ListIcon className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-7 w-7 rounded-sm"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" className="h-9 font-medium">
+                  Sort by: Name <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
               </div>
-            </div>
+            </header>
 
-            {/* Main Listing Section */}
-            <div className="relative">
+            <div className="relative min-h-[400px]">
               {filteredItems.length === 0 ? (
                 <EmptyState
                   onUpload={() => setUploadDialogOpen(true)}
-                  onSync={() => toast.info("Directory sync triggered via local engine")}
+                  onSync={() => toast.info("Directory sync triggered")}
                 />
               ) : viewMode === 'grid' ? (
                 <FileGrid
@@ -281,25 +261,18 @@ export default function App() {
               )}
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
       <UploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} onUpload={handleUpload} />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} onShare={submitShare} file={fileToShare} />
+
       <Toaster
         richColors
-        closeButton
-        position="top-center"
+        position="bottom-right"
         theme="light"
-        expand={false}
         toastOptions={{
-          style: {
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            fontFamily: "'Manrope', sans-serif",
-            fontWeight: 600,
-          }
+          className: 'rounded-sm border-border bg-card text-foreground shadow-lg font-sans',
         }}
       />
     </div>

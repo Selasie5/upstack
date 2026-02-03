@@ -22,13 +22,13 @@ export function NewFolderDialog({ open, onOpenChange, onCreateFolder }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="rounded-lg bg-blue-100 dark:bg-blue-950/30 p-2">
-              <Folder className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="rounded-sm bg-green-100 dark:bg-green-950/30 p-2">
+              <Folder className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             Create New Folder
           </DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-3">
             <Label htmlFor="folder-name">Folder Name</Label>
@@ -46,9 +46,9 @@ export function NewFolderDialog({ open, onOpenChange, onCreateFolder }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-gray-100\">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => onOpenChange(false)}
             >
               Cancel

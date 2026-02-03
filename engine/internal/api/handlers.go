@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Selasie5/upstack/engine/internal/email"
 	"github.com/Selasie5/upstack/engine/internal/metadata"
 	"github.com/Selasie5/upstack/engine/internal/storage"
 	syncer "github.com/Selasie5/upstack/engine/internal/sync"
@@ -18,13 +19,17 @@ type Server struct {
 	meta  *metadata.Service
 	store storage.ChunkStore
 	sync  *syncer.Service
+	auth  *AuthService
+	email *email.Service
 }
 
-func NewServer(m *metadata.Service, s storage.ChunkStore, sy *syncer.Service) *Server {
+func NewServer(m *metadata.Service, s storage.ChunkStore, sy *syncer.Service, a *AuthService, e *email.Service) *Server {
 	return &Server{
 		meta:  m,
 		store: s,
 		sync:  sy,
+		auth:  a,
+		email: e,
 	}
 }
 
@@ -40,6 +45,10 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/v1/files/download_chunk", s.handleDownloadChunk)
 	mux.HandleFunc("/api/v1/files", s.handleListFiles)       // New Endpoint
 	mux.HandleFunc("/api/v1/files/share", s.handleShareFile) // Sharing Endpoint
+
+	// Authentication
+	mux.HandleFunc("/api/v1/auth/register", s.handleRegister)
+	mux.HandleFunc("/api/v1/auth/login", s.handleLogin)
 
 	// Public
 	// Note: In production, we would wrap this with:
@@ -65,17 +74,38 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" {
+		if r.URL.Path == "/health" || r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/register" {
 			next.ServeHTTP(w, r)
 			return
 		}
-		// 04.2.6 Access Control / Authentication Check
-		userID := r.Header.Get("X-User-ID")
-		if userID == "" {
-			http.Error(w, "Unauthorized: Missing X-User-ID header", http.StatusUnauthorized)
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			// Fallback to X-User-ID for now? Ideally strictly Token.
+			// Let's check X-User-ID for backward compatibility during transition
+			userID := r.Header.Get("X-User-ID")
+			if userID != "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			http.Error(w, "Unauthorized: Missing token", http.StatusUnauthorized)
 			return
 		}
-		// Pass userID to context if needed? For MVP assume explicit permissions check inside handlers or implicit owner.
+
+		// Bearer <token>
+		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+			http.Error(w, "Invalid auth header", http.StatusUnauthorized)
+			return
+		}
+
+		token := authHeader[7:]
+		userId, err := s.auth.VerifyToken(token)
+		if err != nil {
+			http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		r.Header.Set("X-User-ID", userId)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -265,7 +295,55 @@ func (s *Server) handleShareFile(w http.ResponseWriter, r *http.Request) {
 		}
 		// Log event so the shared user (and owner) syncs the update
 		s.sync.LogEvent(models.EventFileUpdate, meta.ID, meta.Version)
+
+		// 4. Send Email Notification
+		owner, _ := s.meta.GetUserByID(userID)
+		ownerName := owner.Name
+		if ownerName == "" {
+			ownerName = userID
+		}
+		go s.email.SendShareNotification(req.ShareWith, meta.Path, ownerName)
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req models.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	user, token, err := s.auth.Register(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(models.AuthResponse{User: user, Token: token})
+}
+
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req models.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	user, token, err := s.auth.Login(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(models.AuthResponse{User: user, Token: token})
 }

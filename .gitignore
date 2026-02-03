@@ -4,3 +4,4 @@ metadata_store.json
 
 # Quick-commit script output/binaries
 bin/
+.env*

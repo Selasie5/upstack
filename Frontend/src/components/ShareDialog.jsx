@@ -5,97 +5,89 @@ import {
     DialogHeader,
     DialogTitle,
     DialogDescription,
-    DialogFooter
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Users, Copy, Shield } from 'lucide-react';
-import { toast } from 'sonner';
+import { Mail, Shield, ShieldCheck, UserPlus, Info } from 'lucide-react';
 
 export function ShareDialog({ open, onOpenChange, onShare, file }) {
-    const [userId, setUserId] = useState('');
+    const [email, setEmail] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (userId.trim()) {
-            onShare(userId.trim());
-            setUserId('');
+        if (email.trim()) {
+            onShare(email.trim());
+            setEmail('');
         }
-    };
-
-    const handleCopyLink = () => {
-        navigator.clipboard.writeText(`http://upstack.link/file/${file?.id}`);
-        toast.success("Link copied to clipboard");
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md border-slate-200">
-                <DialogHeader>
-                    <DialogTitle className="uppercase tracking-tight">Access Control</DialogTitle>
-                    <DialogDescription className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
-                        Modify permission set for: {file?.path || file?.name}
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="sm:max-w-md border-slate-200 rounded-[28px] overflow-hidden p-0 gap-0">
+                <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-600 rounded-full translate-x-1/2 -translate-y-1/2 opacity-20 blur-2xl"></div>
+                    <DialogHeader className="relative z-10">
+                        <div className="h-12 w-12 bg-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-green-500/20">
+                            <ShieldCheck className="h-6 w-6" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black tracking-tight text-white mb-1">Secure Sharing</DialogTitle>
+                        <DialogDescription className="text-green-200/60 font-medium text-xs">
+                            {file?.path || file?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
 
-                <div className="space-y-6 py-4">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                            Resource Identifier
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                id="link"
-                                className="bg-slate-50 text-xs font-mono rounded-sm h-8"
-                                defaultValue={`OBJ_ID_${file?.id?.substring(0, 16) || 'LOADING'}...`}
-                                readOnly
-                            />
-                            <Button type="button" size="icon" className="h-8 w-8 px-0" variant="secondary" onClick={handleCopyLink}>
-                                <Copy className="h-3.5 w-3.5" />
+                <div className="p-8 space-y-8 bg-white">
+                    <div className="space-y-4">
+                        <div className="flex items-start gap-4 p-4 bg-green-50/50 border border-green-100/50 rounded-2xl">
+                            <Info className="h-4 w-4 text-green-600 mt-1 shrink-0" />
+                            <p className="text-[11px] font-bold text-green-900 leading-relaxed uppercase tracking-tight">
+                                Sharing will grant full read access to this resource and notify the recipient via email.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-2.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    Recipient Email Address
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-300 group-focus-within:text-green-600 transition-all">
+                                        <Mail className="h-4.5 w-4.5" />
+                                    </div>
+                                    <Input
+                                        placeholder="colleague@example.com"
+                                        className="pl-11 h-12 rounded-[16px] border-slate-200/60 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-green-500/5 transition-all font-bold"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        type="email"
+                                    />
+                                </div>
+                            </div>
+                            <Button type="submit" className="w-full h-12 rounded-[16px] bg-slate-900 hover:bg-slate-800 text-xs font-black uppercase tracking-widest shadow-xl">
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Grant Authorization
                             </Button>
-                        </div>
+                        </form>
                     </div>
-
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-slate-100" />
-                        </div>
-                        <div className="relative flex justify-center text-[10px] uppercase tracking-tighter">
-                            <span className="bg-white px-3 text-slate-400 font-bold">ACL Update</span>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-3">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                            Authorize User Identity
-                        </label>
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="UID: BOB_SYSTEM_01"
-                                className="h-9 text-sm rounded-sm"
-                                value={userId}
-                                onChange={(e) => setUserId(e.target.value)}
-                            />
-                            <Button type="submit" size="sm" className="px-5">
-                                <Shield className="mr-2 h-3.5 w-3.5" />
-                                Grant
-                            </Button>
-                        </div>
-                    </form>
 
                     {(file?.raw?.shared_with && file.raw.shared_with.length > 0) && (
-                        <div className="space-y-3 pt-4 border-t border-slate-100">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Active Permissions</p>
-                            <div className="space-y-1 max-h-32 overflow-y-auto">
+                        <div className="space-y-4 pt-6 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Authorized Nodes</h4>
+                            <div className="grid gap-2 max-h-40 overflow-y-auto pr-2 no-scrollbar">
                                 {file.raw.shared_with.map((u, i) => (
-                                    <div key={i} className="bg-slate-50 border border-slate-100 px-3 py-2 rounded-sm flex items-center justify-between">
-                                        <div className="flex items-center gap-2 overflow-hidden">
-                                            <div className="h-5 w-5 rounded-sm bg-blue-100 flex items-center justify-center text-[10px] text-blue-600 font-black shrink-0">
+                                    <div key={i} className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-sm group hover:border-green-100 hover:bg-white transition-all">
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="h-8 w-8 rounded-sm bg-white flex items-center justify-center text-[10px] text-green-600 font-black shadow-sm group-hover:scale-110 transition-transform">
                                                 {u[0].toUpperCase()}
                                             </div>
                                             <span className="text-xs font-bold text-slate-700 truncate tracking-tight">{u}</span>
                                         </div>
-                                        <span className="text-[9px] font-black uppercase text-green-600 tracking-tighter">Authorized</span>
+                                        <div className="flex items-center gap-1 text-[9px] font-black uppercase text-green-600">
+                                            <Shield className="h-3 w-3" />
+                                            Active
+                                        </div>
                                     </div>
                                 ))}
                             </div>

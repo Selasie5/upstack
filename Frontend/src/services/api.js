@@ -1,21 +1,55 @@
 const API_URL = 'http://localhost:8080/api/v1';
 
 export const auth = {
-  login: (userId) => {
-    localStorage.setItem('upstack_user_id', userId);
+  setSession: (user, token) => {
+    localStorage.setItem('upstack_user', JSON.stringify(user));
+    localStorage.setItem('upstack_token', token);
   },
   logout: () => {
-    localStorage.removeItem('upstack_user_id');
+    localStorage.removeItem('upstack_user');
+    localStorage.removeItem('upstack_token');
   },
   getUser: () => {
-    return localStorage.getItem('upstack_user_id');
+    const user = localStorage.getItem('upstack_user');
+    return user ? JSON.parse(user) : null;
+  },
+  getToken: () => {
+    return localStorage.getItem('upstack_token');
+  },
+  register: async (email, password, name) => {
+    const res = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name })
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || 'Registration failed');
+    }
+    const data = await res.json();
+    auth.setSession(data.user, data.token);
+    return data;
+  },
+  login: async (email, password) => {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || 'Login failed');
+    }
+    const data = await res.json();
+    auth.setSession(data.user, data.token);
+    return data;
   }
 };
 
 const getHeaders = () => {
-  const userId = auth.getUser();
+  const token = auth.getToken();
   return {
-    'X-User-ID': userId || '',
+    'Authorization': token ? `Bearer ${token}` : '',
     'Content-Type': 'application/json'
   };
 };
@@ -40,7 +74,6 @@ export const api = {
   },
 
   uploadChunk: async (hash, blob) => {
-    // Binary upload, update content-type
     const headers = getHeaders();
     headers['Content-Type'] = 'application/octet-stream';
 
@@ -65,17 +98,17 @@ export const api = {
 
   downloadChunk: async (hash) => {
     const res = await fetch(`${API_URL}/files/download_chunk?hash=${hash}`, {
-      headers: { 'X-User-ID': auth.getUser() } // No json content type
+      headers: { 'Authorization': `Bearer ${auth.getToken()}` }
     });
     if (!res.ok) throw new Error('Download chunk failed');
     return res.blob();
   },
 
-  share: async (fileId, userId) => {
+  share: async (fileId, shareEmail) => {
     const res = await fetch(`${API_URL}/files/share`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ id: fileId, share_with: userId })
+      body: JSON.stringify({ id: fileId, share_with: shareEmail })
     });
     if (!res.ok) {
       const txt = await res.text();

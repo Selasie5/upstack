@@ -16,6 +16,11 @@ type Store interface {
 	GetFileByPath(path string) (models.FileMetadata, bool)
 	ListFiles() ([]models.FileMetadata, error)
 	Upsert(meta models.FileMetadata) error
+
+	// User Management
+	GetUserByEmail(email string) (models.User, bool)
+	GetUserByID(id string) (models.User, bool)
+	UpsertUser(user models.User) error
 }
 
 // Service provides strong consistency for file metadata
@@ -61,6 +66,18 @@ func (s *Service) GetFileByID(id string) (models.FileMetadata, bool) {
 	return s.store.GetFileByID(id)
 }
 
+func (s *Service) GetUserByEmail(email string) (models.User, bool) {
+	return s.store.GetUserByEmail(email)
+}
+
+func (s *Service) GetUserByID(id string) (models.User, bool) {
+	return s.store.GetUserByID(id)
+}
+
+func (s *Service) UpsertUser(user models.User) error {
+	return s.store.UpsertUser(user)
+}
+
 // CheckAndSet performs an atomic update with strong consistency checks
 // userID is the actor performing the update
 func (s *Service) CheckAndSet(meta models.FileMetadata, userID string) (models.FileMetadata, error) {
@@ -93,7 +110,7 @@ func (s *Service) CheckAndSet(meta models.FileMetadata, userID string) (models.F
 		if current.Version >= meta.Version {
 			return current, fmt.Errorf("conflict: server version %d >= client version %d", current.Version, meta.Version)
 		}
-		
+
 		// Preserve Original Owner if not sent
 		if meta.OwnerID == "" {
 			meta.OwnerID = current.OwnerID
@@ -125,6 +142,8 @@ type FileBackedStore struct {
 	mu        sync.RWMutex
 	files     map[string]models.FileMetadata
 	pathToID  map[string]string
+	users     map[string]models.User
+	emailToID map[string]string
 	storePath string
 }
 
@@ -132,6 +151,8 @@ func NewFileBackedStore(path string) *FileBackedStore {
 	s := &FileBackedStore{
 		files:     make(map[string]models.FileMetadata),
 		pathToID:  make(map[string]string),
+		users:     make(map[string]models.User),
+		emailToID: make(map[string]string),
 		storePath: path,
 	}
 	_ = s.load()
@@ -150,6 +171,7 @@ func (s *FileBackedStore) load() error {
 
 	var data struct {
 		Files map[string]models.FileMetadata `json:"files"`
+		Users map[string]models.User         `json:"users"`
 	}
 	if err := json.NewDecoder(f).Decode(&data); err != nil {
 		return err
@@ -159,14 +181,20 @@ func (s *FileBackedStore) load() error {
 		s.files[id] = meta
 		s.pathToID[meta.Path] = id
 	}
+	for id, user := range data.Users {
+		s.users[id] = user
+		s.emailToID[user.Email] = id
+	}
 	return nil
 }
 
 func (s *FileBackedStore) save() error {
 	data := struct {
 		Files map[string]models.FileMetadata `json:"files"`
+		Users map[string]models.User         `json:"users"`
 	}{
 		Files: s.files,
+		Users: s.users,
 	}
 
 	f, err := os.Create(s.storePath)
@@ -199,7 +227,7 @@ func (s *FileBackedStore) GetFileByPath(path string) (models.FileMetadata, bool)
 func (s *FileBackedStore) Upsert(meta models.FileMetadata) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.files[meta.ID] = meta
 	s.pathToID[meta.Path] = meta.ID
 	return s.save()
@@ -213,4 +241,30 @@ func (s *FileBackedStore) ListFiles() ([]models.FileMetadata, error) {
 		list = append(list, m)
 	}
 	return list, nil
+}
+
+func (s *FileBackedStore) GetUserByEmail(email string) (models.User, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	id, ok := s.emailToID[email]
+	if !ok {
+		return models.User{}, false
+	}
+	u, ok := s.users[id]
+	return u, ok
+}
+
+func (s *FileBackedStore) GetUserByID(id string) (models.User, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	u, ok := s.users[id]
+	return u, ok
+}
+
+func (s *FileBackedStore) UpsertUser(user models.User) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.users[user.ID] = user
+	s.emailToID[user.Email] = user.ID
+	return s.save()
 }
