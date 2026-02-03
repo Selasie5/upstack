@@ -1,0 +1,8 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "go build -o server ./engine/cmd/server/main.go"
+
+[deploy]
+startCommand = "./server"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

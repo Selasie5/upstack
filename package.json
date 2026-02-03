@@ -1,0 +1,21 @@
+{
+    "name": "upstack-backend",
+    "version": "1.0.0",
+    "description": "UpStack Cloud Storage Backend",
+    "main": "server",
+    "scripts": {
+        "build": "go build -o server ./engine/cmd/server/main.go",
+        "start": "./server"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Selasie5/upstack"
+    },
+    "keywords": [
+        "cloud-storage",
+        "file-sync",
+        "go"
+    ],
+    "author": "Selasie Sepenu",
+    "license": "MIT"
+}
