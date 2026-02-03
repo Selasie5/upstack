@@ -53,12 +53,19 @@ export function FileList({ items, onItemClick, onDownload, onDelete, onShare }) 
                       <span className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                         {item.name}
                       </span>
-                      {item.raw?.shared_with?.length > 0 && (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Shared</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {item.raw?.shared_with?.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Shared</span>
+                          </div>
+                        )}
+                        {item.raw?.version && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-muted-foreground/60 font-medium">v{item.raw.version}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </td>

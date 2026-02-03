@@ -58,7 +58,7 @@ export function UploadDialog({ open, onOpenChange, onUpload }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-border shadow-2xl">
         <DialogHeader className="p-6 bg-muted/30 border-b border-border">
-          <DialogTitle className="text-xl font-semibold tracking-tight">Upload objects</DialogTitle>
+          <DialogTitle className="text-xl font-semibold tracking-tight">Upload files</DialogTitle>
           <DialogDescription className="text-sm">
             Add new files to your distributed storage node.
           </DialogDescription>
@@ -85,8 +85,8 @@ export function UploadDialog({ open, onOpenChange, onUpload }) {
               <Cloud className="h-6 w-6 text-primary" />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold">Click to upload or drag and drop</p>
-              <p className="text-xs text-muted-foreground">Any file type up to 10GB</p>
+              <p className="text-sm font-semibold">Drag files here or browse</p>
+              <p className="text-xs text-muted-foreground">Supported files up to 100 MB</p>
             </div>
           </div>
 
@@ -125,7 +125,7 @@ export function UploadDialog({ open, onOpenChange, onUpload }) {
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={files.length === 0} className="px-8 font-semibold shadow-sm">
-            Complete Upload
+            Upload
           </Button>
         </DialogFooter>
       </DialogContent>

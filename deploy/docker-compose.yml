@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Backend API Server
+  upstack-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_DB_NAME=${MONGO_DB_NAME:-upstack}
+      - JWT_SECRET=${JWT_SECRET}
+      - S3_BUCKET=${S3_BUCKET}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SMTP_EMAIL=${SMTP_EMAIL}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    volumes:
+      - upstack-data:/root/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - upstack-network
+
+  # MongoDB (for local development/testing)
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=upstack
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - upstack-network
+
+  # Frontend (optional - for local testing)
+  upstack-frontend:
+    build:
+      context: ../Frontend
+      dockerfile: ../deploy/Dockerfile.frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - upstack-api
+    restart: unless-stopped
+    networks:
+      - upstack-network
+
+volumes:
+  upstack-data:
+  mongo-data:
+
+networks:
+  upstack-network:
+    driver: bridge

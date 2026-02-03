@@ -24,14 +24,14 @@ export function ShareDialog({ open, onOpenChange, onShare, file }) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md border-border rounded-sm overflow-hidden p-0 gap-0">
-                <div className="bg-slate-900 px-6 py-8 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary rounded-full translate-x-1/2 -translate-y-1/2 opacity-20 blur-2xl"></div>
+                <div className="bg-white px-6 py-8 relative overflow-hidden border-b border-border">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary rounded-full translate-x-1/2 -translate-y-1/2 opacity-5 blur-2xl"></div>
                     <DialogHeader className="relative z-10 flex flex-col items-center text-center">
                         <div className="h-12 w-12 bg-primary rounded-sm flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-                            <ShieldCheck className="h-6 w-6" />
+                            <ShieldCheck className="h-6 w-6 text-white" />
                         </div>
-                        <DialogTitle className="text-xl font-bold tracking-tight text-white mb-1">Secure Authorization</DialogTitle>
-                        <DialogDescription className="text-primary-foreground/60 font-medium text-xs truncate max-w-[280px]">
+                        <DialogTitle className="text-xl font-bold tracking-tight text-slate-900 mb-1">Secure Authorization</DialogTitle>
+                        <DialogDescription className="text-muted-foreground font-medium text-xs truncate max-w-[280px]">
                             {file?.path || file?.name}
                         </DialogDescription>
                     </DialogHeader>

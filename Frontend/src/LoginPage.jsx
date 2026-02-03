@@ -52,18 +52,26 @@ export function LoginPage({ onLogin }) {
                         <span className="text-[10px] font-black text-green-100 uppercase tracking-widest">v2.1 Real-Auth Engine</span>
                     </div>
                     <h2 className="text-5xl font-black text-white leading-[1.1] tracking-tight">
-                        {mode === 'login' ? 'Continue your' : 'Start your'} <br />
-                        <span className="text-green-200">distributed journey.</span>
+                        {mode === 'login' ? 'Pick up where you left off' : 'Your files, everywhere.'}
                     </h2>
                     <p className="text-green-100/70 mt-6 text-base font-semibold leading-relaxed">
-                        Secure, production-grade authentication with decentralized file synchronization.
+                        {mode === 'login'
+                            ? 'Your files are ready when you are.'
+                            : 'UpStack keeps your files safe, synced, and easy to share — just like a drive should.'}
                     </p>
+                    {mode === 'register' && (
+                        <div className="mt-8 flex flex-wrap gap-4 text-white/60 text-[10px] font-bold uppercase tracking-wider">
+                            <span className="flex items-center gap-1.5"><ShieldCheck className="h-3 w-3" /> Secure storage</span>
+                            <span className="flex items-center gap-1.5"><Cloud className="h-3 w-3" /> Automatic sync</span>
+                            <span className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> Access anywhere</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="z-10 flex gap-8 text-white/40 uppercase text-[9px] font-black tracking-[0.25em]">
                     <span>JWT Security</span>
                     <span>MongoDB Persistence</span>
-                    <span>SMTP Integration</span>
+                    <span>S3 Compatible</span>
                 </div>
             </div>
 
@@ -72,12 +80,12 @@ export function LoginPage({ onLogin }) {
                 <div className="w-full max-w-[380px] space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                     <div className="space-y-3">
                         <h3 className="text-4xl font-black text-slate-900 tracking-tight leading-none">
-                            {mode === 'login' ? 'Sign In' : 'Join the Node'}
+                            {mode === 'login' ? 'Sign in' : 'Create your account'}
                         </h3>
-                        <p className="text-slate-400 font-bold text-sm tracking-tight capitalize">
+                        <p className="text-slate-400 font-bold text-sm tracking-tight">
                             {mode === 'login'
-                                ? 'authorized credentials required to access nodes.'
-                                : 'Initialize your identity for global synchronization.'}
+                                ? 'Welcome back.'
+                                : 'Store, sync, and access your files from anywhere.'}
                         </p>
                     </div>
 
@@ -85,7 +93,7 @@ export function LoginPage({ onLogin }) {
                         <div className="space-y-5">
                             {mode === 'register' && (
                                 <div className="space-y-2.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Name</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-300 group-focus-within:text-green-600 transition-all">
                                             <User className="h-4.5 w-4.5" />
@@ -94,7 +102,7 @@ export function LoginPage({ onLogin }) {
                                             type="text"
                                             required
                                             className="pl-11 h-12 rounded-[16px] border-slate-200"
-                                            placeholder="Enter your name..."
+                                            placeholder="Your name"
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
                                         />
@@ -103,7 +111,7 @@ export function LoginPage({ onLogin }) {
                             )}
 
                             <div className="space-y-2.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-300 group-focus-within:text-green-600 transition-all">
                                         <Mail className="h-4.5 w-4.5" />
@@ -112,7 +120,7 @@ export function LoginPage({ onLogin }) {
                                         type="email"
                                         required
                                         className="pl-11 h-12 rounded-[16px] border-slate-200"
-                                        placeholder="user@example.com"
+                                        placeholder="you@example.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                     />
@@ -120,7 +128,7 @@ export function LoginPage({ onLogin }) {
                             </div>
 
                             <div className="space-y-2.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Security Keyphrase</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-300 group-focus-within:text-green-600 transition-all">
                                         <Lock className="h-4.5 w-4.5" />
@@ -129,11 +137,14 @@ export function LoginPage({ onLogin }) {
                                         type="password"
                                         required
                                         className="pl-11 h-12 rounded-[16px] border-slate-200"
-                                        placeholder="••••••••"
+                                        placeholder={mode === 'register' ? 'Create a password' : 'Enter your password'}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                     />
                                 </div>
+                                {mode === 'register' && (
+                                    <p className="text-[10px] text-slate-400 font-medium ml-1">Use at least 8 characters.</p>
+                                )}
                             </div>
                         </div>
 
@@ -144,7 +155,7 @@ export function LoginPage({ onLogin }) {
                         >
                             {loading ? <Loader2 className="animate-spin h-4 w-4" /> : (
                                 <>
-                                    {mode === 'login' ? 'Verify & Enter' : 'Initialize Account'}
+                                    {mode === 'login' ? 'Sign in' : 'Create account'}
                                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                                 </>
                             )}
@@ -157,8 +168,14 @@ export function LoginPage({ onLogin }) {
                             onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
                             className="text-[11px] font-black text-green-600 uppercase tracking-widest hover:text-green-700 transition-colors"
                         >
-                            {mode === 'login' ? 'Create New Node Identity' : 'Already have credentials? Sign in'}
+                            {mode === 'login' ? 'Don’t have an account? Create one' : 'Already have an account? Sign in'}
                         </button>
+                    </div>
+
+                    <div className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-60">
+                        {mode === 'login'
+                            ? 'Forgot your password?'
+                            : 'By creating an account, you agree to our Terms and Privacy Policy.'}
                     </div>
 
                     <div className="pt-8 border-t border-slate-100 flex justify-between items-center text-slate-300 font-black text-[9px] uppercase tracking-widest">
