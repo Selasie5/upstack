@@ -3,7 +3,6 @@ package storage
 import (
 	"bytes"
 	"io"
-	"net/http"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"

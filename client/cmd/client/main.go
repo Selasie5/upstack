@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
+
 	"log"
 	"os"
 	"path/filepath"
-	"time"
+	
 
 	"github.com/Selasie5/upstack/client/metadata"
 	"github.com/Selasie5/upstack/client/sync"

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -30,21 +31,36 @@ func NewServer(m *metadata.Service, s storage.ChunkStore, sy *syncer.Service) *S
 func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", s.health)
-	
+
 	// Core Protocol
 	mux.HandleFunc("/api/v1/files/check_chunks", s.handleCheckChunks) // Delta check
 	mux.HandleFunc("/api/v1/files/upload_chunk", s.handleUploadChunk) // Upload binary
 	mux.HandleFunc("/api/v1/files/metadata", s.handleUpdateMetadata)  // Commit
 	mux.HandleFunc("/api/v1/changes", s.handlePollChanges)            // Poll
 	mux.HandleFunc("/api/v1/files/download_chunk", s.handleDownloadChunk)
-	mux.HandleFunc("/api/v1/files", s.handleListFiles) // New Endpoint
+	mux.HandleFunc("/api/v1/files", s.handleListFiles)       // New Endpoint
 	mux.HandleFunc("/api/v1/files/share", s.handleShareFile) // Sharing Endpoint
 
 	// Public
 	// Note: In production, we would wrap this with:
 	// return s.authMiddleware(mux)
 	// For the demo/inspection as requested in the plan:
-	return s.authMiddleware(mux)
+	return s.corsMiddleware(s.authMiddleware(mux))
+}
+
+func (s *Server) corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-User-ID")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -104,7 +120,9 @@ func (s *Server) handleUploadChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Uploading chunk: %s", hash)
 	if err := s.store.WriteChunk(hash, r.Body); err != nil {
+		log.Printf("Error writing chunk %s: %v", hash, err)
 		http.Error(w, "failed to write: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -127,7 +145,7 @@ func (s *Server) handleUpdateMetadata(w http.ResponseWriter, r *http.Request) {
 	// In prod, would verify existence of all meta.Chunks in s.store
 
 	// 126: newMeta, err := s.meta.CheckAndSet(meta, r.Header.Get("X-User-ID"))
-	
+
 	newMeta, err := s.meta.CheckAndSet(meta, r.Header.Get("X-User-ID"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusConflict) // Return 409 on conflict
@@ -141,7 +159,42 @@ func (s *Server) handleUpdateMetadata(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(newMeta)
 }
 
-// ... existing code ...
+// handlePollChanges returns events after a certain ID
+func (s *Server) handlePollChanges(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	lastStr := r.URL.Query().Get("last")
+	last, _ := strconv.ParseInt(lastStr, 10, 64)
+
+	events := s.sync.PollChanges(last)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"events": events})
+}
+
+// handleDownloadChunk retrieves binary data
+func (s *Server) handleDownloadChunk(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	hash := r.URL.Query().Get("hash")
+	if hash == "" {
+		http.Error(w, "missing hash", http.StatusBadRequest)
+		return
+	}
+
+	reader, err := s.store.ReadChunk(hash)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	defer reader.Close()
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	_, _ = io.Copy(w, reader)
+}
 
 // handleListFiles returns all files
 func (s *Server) handleListFiles(w http.ResponseWriter, r *http.Request) {
@@ -150,8 +203,10 @@ func (s *Server) handleListFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := r.Header.Get("X-User-ID")
+	log.Printf("Listing files for user: %s", userID)
 	files, err := s.meta.ListFiles(userID)
 	if err != nil {
+		log.Printf("Error listing files for %s: %v", userID, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -162,7 +217,7 @@ func (s *Server) handleListFiles(w http.ResponseWriter, r *http.Request) {
 // ShareRequest
 type ShareRequest struct {
 	ID        string `json:"id"`
-	ShareWith string `json:"share_with"` 
+	ShareWith string `json:"share_with"`
 }
 
 // handleShareFile adds a user to the allowed list
@@ -203,7 +258,7 @@ func (s *Server) handleShareFile(w http.ResponseWriter, r *http.Request) {
 	if !alreadyShared {
 		meta.SharedWith = append(meta.SharedWith, req.ShareWith)
 		meta.Version++ // Increment version for sync
-		
+
 		if _, err := s.meta.CheckAndSet(meta, userID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

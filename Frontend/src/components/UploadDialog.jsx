@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Upload, X, FileIcon, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -53,18 +53,20 @@ export function UploadDialog({ open, onOpenChange, onUpload }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-137">
+      <DialogContent className="sm:max-w-md border-slate-200">
         <DialogHeader>
-          <DialogTitle>Upload Files</DialogTitle>
+          <DialogTitle className="uppercase tracking-tight">System Upload</DialogTitle>
+          <DialogDescription className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
+            Stage files for distribution
+          </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-5">
+
+        <div className="space-y-6 mt-4">
           <div
-            className={`relative border-2 border-dashed rounded-xl p-10 sm:p-14 text-center transition-all duration-200 shadow-sm ${
-              dragActive 
-                ? 'border-blue-500 bg-blue-50 shadow-md scale-98' 
-                : 'border-gray-300 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md'
-            }`}
+            className={`relative border border-dashed rounded-sm p-12 text-center transition-all bg-slate-50/50 ${dragActive
+                ? 'border-blue-500 bg-blue-50/50 scale-[0.99]'
+                : 'border-slate-300 hover:border-slate-400'
+              }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -78,73 +80,68 @@ export function UploadDialog({ open, onOpenChange, onUpload }) {
               className="sr-only"
             />
             <label htmlFor="file-upload" className="cursor-pointer">
-              <div className="mx-auto mb-4 rounded-full bg-blue-100 p-4 w-fit">
-                <Upload className="h-8 w-8 text-blue-600" />
+              <div className="mx-auto mb-4 rounded-sm bg-white border border-slate-200 p-3 shadow-sm w-fit">
+                <Upload className="h-6 w-6 text-slate-500" />
               </div>
-              <p className="text-sm mb-2">
-                <span className="text-blue-600">Click to browse</span> or drag and drop
+              <p className="text-xs font-bold uppercase tracking-tight text-slate-700">
+                Drag and drop or <span className="text-blue-600">browse</span>
               </p>
-              <p className="text-xs text-gray-500">
-                Support for any file type • Max 100MB per file
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">
+                MAX 100MB PER OBJECT
               </p>
             </label>
           </div>
 
           {selectedFiles.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  STAGING AREA ({selectedFiles.length})
                 </h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
                   onClick={() => setSelectedFiles([])}
-                  className="h-7 text-xs"
+                  className="text-[10px] font-bold text-red-600 uppercase hover:underline"
                 >
                   Clear all
-                </Button>
+                </button>
               </div>
-              <div className="space-y-2 max-h-62 overflow-y-auto pr-1">
+              <div className="space-y-1 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                 {selectedFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 text-sm hover:bg-gray-50 transition-colors group"
+                    className="flex items-center justify-between border border-slate-100 bg-white p-2 rounded-sm group transition-colors hover:border-slate-300"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="rounded-lg bg-gray-100 p-2">
-                        <FileIcon className="h-4 w-4 text-gray-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm">{file.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileIcon className="h-3.5 w-3.5 text-slate-400" />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-slate-700 uppercase tracking-tight">{file.name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold tracking-tighter uppercase">{formatFileSize(file.size)}</p>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    <button
+                      className="text-slate-300 hover:text-red-500 transition-colors p-1"
                       onClick={() => removeFile(index)}
                     >
                       <X className="h-3.5 w-3.5" />
-                    </Button>
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
+              size="sm"
               onClick={handleUpload}
               disabled={selectedFiles.length === 0}
-              className="min-w-25"
+              className="px-8"
             >
-              Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
+              Commit Upload
             </Button>
           </div>
         </div>
