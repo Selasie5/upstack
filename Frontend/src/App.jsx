@@ -181,7 +181,7 @@ export default function App() {
   });
 
   return (
-    <div className="grid grid-cols-[240px_1fr] h-screen bg-background overflow-hidden selection:bg-primary/10 selection:text-primary">
+    <div className="grid grid-cols-[240px_1fr] h-dvh bg-background overflow-hidden selection:bg-primary/10 selection:text-primary">
       <Sidebar
         activeSection={activeSection}
         setActiveSection={setActiveSection}

@@ -27,7 +27,7 @@ export function Sidebar({ activeSection, setActiveSection, user, onLogout }) {
     ];
 
     return (
-        <aside className="flex flex-col h-full bg-[#0F172A] text-[#94A3B8] border-r border-[#1E293B] font-sans">
+        <aside className="flex flex-col h-dvh bg-[#0F172A] text-[#94A3B8] border-r border-[#1E293B] font-sans">
             {/* Logo Section */}
             <div className="h-16 flex items-center px-6 border-b border-[#1E293B]">
                 <div className="flex items-center gap-2.5">
