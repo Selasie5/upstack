@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -60,7 +61,21 @@ func (s *Server) Router() http.Handler {
 
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		// Get allowed origin from environment or use localhost for development
+		allowedOrigin := os.Getenv("FRONTEND_URL")
+		if allowedOrigin == "" {
+			allowedOrigin = "http://localhost:5173"
+		}
+
+		// Check if request origin matches allowed origin
+		origin := r.Header.Get("Origin")
+		if origin == allowedOrigin || origin == "http://localhost:5173" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			// Fallback to allowed origin for non-browser requests
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-User-ID, Authorization")
 
