@@ -90,7 +90,8 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" || r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/register" {
+		// Skip authentication for public endpoints
+		if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/api/v1/auth/") {
 			next.ServeHTTP(w, r)
 			return
 		}
