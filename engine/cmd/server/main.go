@@ -29,7 +29,11 @@ func main() {
 	mongoURI := os.Getenv("MONGO_URI")
 	if mongoURI != "" {
 		log.Println("Using MongoDB Metadata Store")
-		ms, err := metadata.NewMongoStore(mongoURI, "upstack")
+		dbName := os.Getenv("MONGO_DB_NAME")
+		if dbName == "" {
+			dbName = "upstack"
+		}
+		ms, err := metadata.NewMongoStore(mongoURI, dbName)
 		if err != nil {
 			log.Fatalf("failed to connect to mongo: %v", err)
 		}

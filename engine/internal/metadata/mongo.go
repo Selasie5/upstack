@@ -23,6 +23,12 @@ func NewMongoStore(uri string, dbName string) (*MongoStore, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Verify connectivity
+	if err := client.Ping(ctx, nil); err != nil {
+		return nil, err
+	}
+
 	db := client.Database(dbName)
 	filesColl := db.Collection("files")
 	usersColl := db.Collection("users")

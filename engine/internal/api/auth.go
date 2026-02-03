@@ -2,7 +2,9 @@ package api
 
 import (
 	"errors"
+	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Selasie5/upstack/engine/internal/metadata"
@@ -20,7 +22,10 @@ func NewAuthService(store metadata.Store) *AuthService {
 }
 
 func (s *AuthService) Register(req models.RegisterRequest) (models.User, string, error) {
-	if _, exists := s.store.GetUserByEmail(req.Email); exists {
+	email := strings.ToLower(req.Email)
+	log.Printf("Attempting to register user: %s", email)
+	if _, exists := s.store.GetUserByEmail(email); exists {
+		log.Printf("Registration failed: user %s already exists", email)
 		return models.User{}, "", errors.New("user already exists")
 	}
 
@@ -30,31 +35,38 @@ func (s *AuthService) Register(req models.RegisterRequest) (models.User, string,
 	}
 
 	user := models.User{
-		ID:        req.Email, // Simplify ID as email for MVP or use UUID
-		Email:     req.Email,
+		ID:        email, // Email as ID for simplicity, uniquely indexed
+		Email:     email,
 		Password:  string(hashedPassword),
 		Name:      req.Name,
 		CreatedAt: time.Now(),
 	}
 
 	if err := s.store.UpsertUser(user); err != nil {
+		log.Printf("CRITICAL: Failed to persist user to DB: %v", err)
 		return models.User{}, "", err
 	}
 
+	log.Printf("User %s successfully registered and persisted", email)
 	token, err := s.generateToken(user)
 	return user, token, err
 }
 
 func (s *AuthService) Login(req models.LoginRequest) (models.User, string, error) {
-	user, exists := s.store.GetUserByEmail(req.Email)
+	email := strings.ToLower(req.Email)
+	log.Printf("Attempting login for user: %s", email)
+	user, exists := s.store.GetUserByEmail(email)
 	if !exists {
+		log.Printf("Login failed: user %s not found", email)
 		return models.User{}, "", errors.New("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		log.Printf("Login failed: incorrect password for %s", email)
 		return models.User{}, "", errors.New("invalid credentials")
 	}
 
+	log.Printf("User %s successfully authenticated", email)
 	token, err := s.generateToken(user)
 	return user, token, err
 }

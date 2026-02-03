@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Selasie5/upstack/engine/internal/email"
 	"github.com/Selasie5/upstack/engine/internal/metadata"
@@ -81,14 +82,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			// Fallback to X-User-ID for now? Ideally strictly Token.
-			// Let's check X-User-ID for backward compatibility during transition
-			userID := r.Header.Get("X-User-ID")
-			if userID != "" {
-				next.ServeHTTP(w, r)
-				return
-			}
-			http.Error(w, "Unauthorized: Missing token", http.StatusUnauthorized)
+			http.Error(w, "Unauthorized: Authentication required", http.StatusUnauthorized)
 			return
 		}
 
@@ -277,16 +271,17 @@ func (s *Server) handleShareFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Update SharedWith
+	shareEmail := strings.ToLower(req.ShareWith)
 	// Check if already shared
 	alreadyShared := false
 	for _, u := range meta.SharedWith {
-		if u == req.ShareWith {
+		if u == shareEmail {
 			alreadyShared = true
 			break
 		}
 	}
 	if !alreadyShared {
-		meta.SharedWith = append(meta.SharedWith, req.ShareWith)
+		meta.SharedWith = append(meta.SharedWith, shareEmail)
 		meta.Version++ // Increment version for sync
 
 		if _, err := s.meta.CheckAndSet(meta, userID); err != nil {
@@ -302,7 +297,7 @@ func (s *Server) handleShareFile(w http.ResponseWriter, r *http.Request) {
 		if ownerName == "" {
 			ownerName = userID
 		}
-		go s.email.SendShareNotification(req.ShareWith, meta.Path, ownerName)
+		go s.email.SendShareNotification(shareEmail, meta.Path, ownerName)
 	}
 
 	w.WriteHeader(http.StatusOK)
