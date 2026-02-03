@@ -38,6 +38,14 @@ const DialogHeader = ({ className = "", ...props }) => (
 )
 DialogHeader.displayName = "DialogHeader"
 
+const DialogFooter = ({ className = "", ...props }) => (
+  <div
+    className={`flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 ${className}`}
+    {...props}
+  />
+)
+DialogFooter.displayName = "DialogFooter"
+
 const DialogTitle = React.forwardRef(({ className = "", ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
@@ -47,4 +55,13 @@ const DialogTitle = React.forwardRef(({ className = "", ...props }, ref) => (
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
-export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle }
+const DialogDescription = React.forwardRef(({ className = "", ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={`text-sm text-gray-500 ${className}`}
+    {...props}
+  />
+))
+DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription }
