@@ -1,135 +1,110 @@
-# UpStack System Documentation
+# UpStack Distributed Object Storage System
 
-## 1. System Overview
+UpStack is an enterprise-grade, distributed, content-addressable storage (CAS) solution. It is engineered to provide strong consistency for metadata management and eventual consistency for high-volume object data. The system utilizes a decoupled architecture, separating metadata orchestration from physical object persistence to facilitate efficient deduplication, delta synchronization, and secure multi-tenant collaboration.
 
-UpStack is a distributed, content-addressable cloud storage system designed with strong consistency for metadata and eventual consistency for object data. The architecture decouples metadata management from object storage, enabling efficient delta synchronization, deduplication, and scalable file sharing.
+---
 
-The system consists of three primary components:
-1.  **Storage Engine (Backend)**: Manages metadata consistency, access control lists (ACLs), and chunk orchestration. It interfaces with pluggable storage backends (Local/S3 and JSON/MongoDB).
-2.  **Synchronization Agent (Client)**: A file system watcher that handles chunking (fixed-size 4MB), SHA-256 hashing, and delta uploads.
-3.  **Web Interface (Frontend)**: A React-based user interface for file management, sharing, and visualization.
+## 1. Core Capabilities
 
-## 2. Architecture
+*   **Content-Addressable Storage**: Objects are decomposed into fixed-size 4MB chunks, each identified by a unique SHA-256 cryptographic hash.
+*   **Intelligent Deduplication**: Identical data blocks are stored only once across the global namespace, significantly reducing physical storage overhead.
+*   **State-of-the-Art Security**: Implementation of JWT (JSON Web Tokens) for stateless session management and Bcrypt for secure credential hashing.
+*   **Granular Access Control**: Robust Access Control List (ACL) implementation allowing for secure resource sharing between authenticated identities.
+*   **Automated Notifications**: Integrated SMTP subsystem for real-time email alerts during collaborative authorization events.
+*   **Delta Synchronization**: High-performance sync agent that transmits only modified or unique data blocks, optimizing bandwidth consumption.
 
-### 2.1 Content-Addressable Storage (CAS)
-Files are split into 4MB chunks. Each chunk is identified by its SHA-256 hash. This allows for:
-*   **Deduplication**: Identical chunks across different files or users are stored only once.
-*   **Delta Sync**: Modifications to large files result in only new chunks being uploaded.
+---
 
-### 2.2 Metadata Consistency
-Metadata (file names, structure, permissions) is stored in a strictly consistent data store. The system supports CAS (Check-and-Set) operations to prevent race conditions during concurrent edits.
+## 2. Technical Architecture
 
-## 3. Configuration & Cloud Deployment
+The UpStack ecosystem is comprised of three primary sub-systems:
 
-The system is designed to run in a hybrid or fully cloud-native environment. Configuration is managed via environment variables.
+### 2.1 Storage Orchestration Engine (Backend)
+Developed in Go, this component serves as the central authority for metadata consistency (MongoDB), object orchestration (S3/Local), and authentication. It exposes a RESTful API for both the Web Dashboard and the Synchronization Agent.
 
-### 3.1 Enabling Cloud Object Storage (AWS S3)
-To transition from local disk storage to AWS S3, configure the backend with valid AWS credentials and bucket information.
+### 2.2 Synchronization Agent (CLI)
+A high-performance daemon that monitors specific local directory trees. It performs client-side computational tasks—including chunking and hash generation—before Negotiating with the Backend to transmit only missing data segments.
 
-**Required Environment Variables:**
-*   `S3_BUCKET`: The name of the S3 bucket to store chunks (e.g., `prod-upstack-chunks`).
-*   `AWS_REGION`: The AWS region where the bucket resides (e.g., `us-east-1`).
-*   `AWS_ACCESS_KEY_ID`: AWS Access Key with `s3:PutObject` and `s3:GetObject` permissions.
-*   `AWS_SECRET_ACCESS_KEY`: Corresponding AWS Secret Key.
+### 2.3 Management Console (Frontend)
+A React-based single-page application (SPA) focused on object visualization and administrative tasks. It provides a professional, low-latency interface for resource management and ACL modification.
 
-**Implementation Note:**
-The system uses the standard AWS SDK conventions. Ensure the IAM user has sufficient permissions for the specified bucket.
+---
 
-### 3.2 Enabling Cloud Metadata Storage (MongoDB)
-To transition from local flat-file persistence to a scalable database, configure a MongoDB connection.
+## 3. Getting Started
 
-**Required Environment Variable:**
-*   `MONGO_URI`: A standard MongoDB connection string (e.g., `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority`).
+### 3.1 Prerequisites
+*   **Go**: Version 1.22 or higher
+*   **Node.js**: Version 18.x or higher
+*   **MongoDB**: An active cluster (Local or Atlas)
+*   **AWS S3**: Optional, for cloud-native object persistence
 
-**Behavior:**
-If `MONGO_URI` is present, the system automatically initializes the MongoDB driver. If absent, it defaults to `data/metadata.json`.
+### 3.2 Environment Configuration
+Initialize your environment by creating a `.env` file in the root directory. Use the provided `.env.example` as a template.
 
-## 4. Build and execution
+| Variable | Description | Requirement |
+| :--- | :--- | :--- |
+| `MONGO_URI` | Connection string for metadata persistence | Required |
+| `JWT_SECRET` | Cryptographic key for session signing | Required |
+| `SMTP_EMAIL` | Originating email for notifications | Optional |
+| `SMTP_PASSWORD` | App-specific password for SMTP authentication | Optional |
+| `S3_BUCKET` | AWS S3 Bucket name for chunk storage | Optional |
 
-### 4.1 Storage Engine (Backend)
-The backend is written in Go.
+---
 
-**Build:**
-```bash
-go build -o server ./engine/cmd/server/main.go
+## 4. Operational Procedures
+
+### 4.1 Backend Execution
+```powershell
+# Navigate to root and execute the server
+go run ./engine/cmd/server/main.go
 ```
 
-**Run (Cloud Mode):**
-```bash
-export S3_BUCKET="my-bucket"
-export MONGO_URI="mongodb://..."
-./server
-```
-
-**Run (Local Mode):**
-```bash
-./server
-```
-*The server listens on port 8080 by default.*
-
-### 4.2 Web Interface (Frontend)
-The frontend is a Vite-based React application.
-
-**Install Dependencies:**
-```bash
+### 4.2 Frontend Execution
+```powershell
 cd Frontend
 npm install
-```
-
-**Run Development Server:**
-```bash
 npm run dev
 ```
 
-### 4.3 Synchronization Agent
-The client agent watches a local directory for changes.
-
-**Run:**
-```bash
-go run ./client/cmd/client/main.go --dir ./my_sync_folder --server http://localhost:8080
+### 4.3 Sync Agent Initialization
+```powershell
+go run ./client/cmd/client/main.go --dir <target_directory> --server http://localhost:8080
 ```
 
-## 5. Testing Strategy
+---
 
-### 5.1 Unit Testing
-Run the Go test suite to verify internal logic, specifically chunking and hashing algorithms.
+## 5. Testing and Validation Specifications
 
-```bash
-go test ./pkg/... ./client/... ./engine/...
-```
+The following testing flows define the standard validation process for an UpStack deployment.
 
-### 5.2 Integration Testing (Manual)
+### 5.1 Identity and Session Management
+1.  **Identity Creation**: Utilize the register flow to initialize a new user record in the MongoDB cluster.
+2.  **Credential Verification**: Perform a login operation to obtain a JWT.
+3.  **Session Persistence**: Verify that the authentication state is maintained across browser sessions and hard redirects.
 
-**Scenario 1: Basic Synchronization**
-1.  Start the Server (Local Mode).
-2.  Start the Client Agent watching `./test_folder`.
-3.  Create a file `document.txt` in `./test_folder`.
-4.  Verify server logs indicate chunk upload.
-5.  Verify `data/chunks/` contains the hashed chunk.
+### 5.2 Object Storage and Synchronization
+1.  **Ingestion Verification**: Upload a multi-megabyte file to trigger multi-part chunking.
+2.  **Data Integrity**: Download the object to verify the re-assembly process and hash matching.
+3.  **Deduplication Efficiency**: Re-upload the same file and verify via server logs that zero new bytes were written to the storage backend.
 
-**Scenario 2: Deduplication**
-1.  Copy `document.txt` to `document_copy.txt` in the watched folder.
-2.  Verify server logs indicate **zero** bytes uploaded for the new file (only metadata update).
+### 5.3 Collaborative Authorization
+1.  **ACL Modification**: Share a private resource with a secondary email identity.
+2.  **SMTP Verification**: Confirm receipt of the automated security notification.
+3.  **Cross-Identity Access**: Authenticate as the secondary user and verify visibility of the shared object in the "Shared with me" view.
 
-**Scenario 3: Access Control & Sharing**
-1.  Open Frontend and log in as `user_a`.
-2.  Upload `secret.pdf`.
-3.  Open a second browser context (Incognito) and log in as `user_b`. Verify `secret.pdf` is **not** visible.
-4.  As `user_a`, share `secret.pdf` with `user_b`.
-5.  Refresh `user_b` view. Verify `secret.pdf` is now visible and downloadable.
+---
 
 ## 6. API Reference
 
-### Valid Auth Header
-All API requests (except `/health`) must include:
-`X-User-ID: <user_identifier>`
+### 6.1 Authentication Endpoints
+*   `POST /api/v1/auth/register`: Creates a new user identity.
+*   `POST /api/v1/auth/login`: Authenticates credentials and returns a session token.
 
+### 6.2 Resource Endpoints
+*   `GET /api/v1/files`: Retrieves a list of objects accessible to the current identity.
+*   `POST /api/v1/files/upload_chunk`: Ingests a unique data segment.
+*   `POST /api/v1/files/metadata`: Commits the structural mapping of an object.
+*   `POST /api/v1/files/share`: Modifies the ACL and triggers recipient notification.
 
-
-### Endpoints
-*   `POST /api/v1/files/upload_chunk?hash=<sha256>`: Upload binary data.
-*   `POST /api/v1/files/check_chunks`: Batch check for existing hashes.
-*   `POST /api/v1/files/metadata`: Atomic metadata commit.
-*   `GET /api/v1/files`: List files accessible to the authenticated user.
-*   `GET /api/v1/changes`: Poll for delta updates.
-*   `POST /api/v1/files/share`: Share a file with another user ID.
+---
+© 2026 UpStack Core Systems. Proprietary and Confidential.

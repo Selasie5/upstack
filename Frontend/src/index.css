@@ -13,36 +13,38 @@
 }
 
 :root {
-  --background: hsl(210 40% 98%);
-  --foreground: hsl(222.2 84% 4.9%);
+  --background: hsl(150 20% 98%);
+  --foreground: hsl(150 84% 4.9%);
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(222.2 84% 4.9%);
+  --card-foreground: hsl(150 84% 4.9%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(222.2 84% 4.9%);
-  --primary: hsl(221.2 83.2% 53.3%);
-  --primary-foreground: hsl(210 40% 98%);
-  --secondary: hsl(210 40% 96.1%);
-  --secondary-foreground: hsl(222.2 47.4% 11.2%);
-  --muted: hsl(210 40% 96.1%);
-  --muted-foreground: hsl(215.4 16.3% 46.9%);
-  --accent: hsl(210 40% 96.1%);
-  --accent-foreground: hsl(222.2 47.4% 11.2%);
+  --popover-foreground: hsl(150 84% 4.9%);
+  /* Primary Green Theme */
+  --primary: hsl(142.1 76.2% 36.3%);
+  --primary-foreground: hsl(355.7 100% 97.3%);
+  --secondary: hsl(150 40% 96.1%);
+  --secondary-foreground: hsl(150 47.4% 11.2%);
+  --muted: hsl(150 40% 96.1%);
+  --muted-foreground: hsl(150 16.3% 46.9%);
+  --accent: hsl(150 40% 96.1%);
+  --accent-foreground: hsl(150 47.4% 11.2%);
   --destructive: hsl(0 84.2% 60.2%);
   --destructive-foreground: hsl(210 40% 98%);
-  --border: hsl(214.3 31.8% 91.4%);
-  --input: hsl(214.3 31.8% 91.4%);
-  --ring: hsl(221.2 83.2% 53.3%);
-  --radius: 0.75rem;
+  --border: hsl(150 31.8% 91.4%);
+  --input: hsl(150 31.8% 91.4%);
+  --ring: hsl(142.1 76.2% 36.3%);
+  --radius: 0.125rem;
+  /* Professional rounded-sm */
 
-  /* Sidebar Tokens */
-  --sidebar-background: hsl(222.2 47.4% 11.2%);
-  --sidebar-foreground: hsl(210 40% 98%);
-  --sidebar-primary: hsl(217.2 91.2% 59.8%);
+  /* Sidebar Tokens - Darker Green Slate */
+  --sidebar-background: hsl(150 47.4% 11.2%);
+  --sidebar-foreground: hsl(150 40% 98%);
+  --sidebar-primary: hsl(142.1 70.6% 45.3%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(217.2 32.6% 17.5%);
-  --sidebar-accent-foreground: hsl(210 40% 98%);
-  --sidebar-border: hsl(217.2 32.6% 17.5%);
-  --sidebar-ring: hsl(224.3 76.3% 48%);
+  --sidebar-accent: hsl(150 32.6% 17.5%);
+  --sidebar-accent-foreground: hsl(150 40% 98%);
+  --sidebar-border: hsl(150 32.6% 17.5%);
+  --sidebar-ring: hsl(142.1 76.3% 48%);
 
   /* Spacing Scale */
   --space-1: 0.25rem;
@@ -60,7 +62,7 @@
 }
 
 @theme {
-  --font-sans: "Rency", "Inter", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Rency", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -83,8 +85,8 @@
   --color-ring: var(--ring);
 
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius));
+  --radius-sm: calc(var(--radius));
 
   --spacing-1: var(--space-1);
   --spacing-2: var(--space-2);
